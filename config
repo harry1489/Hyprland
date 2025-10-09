@@ -1,0 +1,8 @@
+{
+  "layer": "top",
+  "position": "top",
+  "modules-left": ["sway/workspaces"],
+  "modules-center": ["clock"],
+  "modules-right": ["cpu", "memory", "battery"],
+  "clock": { "format": "%H:%M %d/%m/%Y" }
+}
