@@ -1,0 +1,25 @@
+# Alacritty dynamic color config
+colors:
+  primary:
+    background: '0xFFFFFF' # Day default, switches to 0x1E1E2E for night
+    foreground: '0x000000'
+
+  normal:
+    black:   '0x000000'
+    red:     '0xE06C75'
+    green:   '0x98C379'
+    yellow:  '0xE5C07B'
+    blue:    '0x61AFEF'
+    magenta: '0xC678DD'
+    cyan:    '0x56B6C2'
+    white:   '0xABB2BF'
+
+  bright:
+    black:   '0x5C6370'
+    red:     '0xE06C75'
+    green:   '0x98C379'
+    yellow:  '0xE5C07B'
+    blue:    '0x61AFEF'
+    magenta: '0xC678DD'
+    cyan:    '0x56B6C2'
+    white:   '0xFFFFFF'
