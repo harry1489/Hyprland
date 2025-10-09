@@ -1,0 +1,13 @@
+* {
+  font-family: "Fira Sans", sans-serif;
+  font-size: 12px;
+}
+
+#clock {
+  color: #000000; /* day default, swap to #FFFFFF for night */
+}
+
+#sway-workspaces {
+  background: rgba(255, 255, 255, 0.2); /* day default */
+  border-radius: 5px;
+}
