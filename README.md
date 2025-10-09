@@ -31,5 +31,5 @@ Experience a **day/night cycle desktop** with Alacritty, Waybar, and smooth wall
 1. Clone this repo:
 
 ```bash
-git clone https://github.com/yourusername/summer-day-night-fedora.git
+git clone https://github.com/harry1489/summer-day-night-fedora.git
 cd summer-day-n ight-fedora
