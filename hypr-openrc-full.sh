@@ -1,89 +1,104 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "🔥 Gentoo OpenRC Hyprland Full Setup (Masking & Category Fix) 🔥"
 
+# Ensure the script is run as root
 if [ "$EUID" -ne 0 ]; then
-  echo "Error: Please run as root."
+  echo "Error: Please run this script as root."
   exit 1
 fi
 
-USER_NAME=${SUDO_USER:-$(logname)}
+USER_NAME=${SUDO_USER:-$(logname 2>/dev/null || echo "root")}
 USER_HOME=$(getent passwd "$USER_NAME" | cut -d: -f6)
 
-# 1. Sync and Tooling
-emerge --noreplace app-eselect/eselect-repository dev-vcs/git
-
-# 2. Enable GURU overlay
+# 1. Sync and enable necessary repositories
+echo "🔄 Syncing repositories and enabling GURU overlay..."
+emerge --noreplace --quiet app-eselect/eselect-repository dev-vcs/git
 if ! eselect repository list -i | grep -q "guru"; then
     eselect repository enable guru
     emaint sync -r guru
 fi
 
-# 3. Handle Masked Packages & Keywords (Fixes your "All ebuilds... have been masked" error)
-echo "🔓 Unmasking required packages..."
+# 2. Unmask required packages and accept licenses
+echo "🔓 Unmasking required packages and accepting licenses..."
 mkdir -p /etc/portage/package.accept_keywords
 mkdir -p /etc/portage/package.license
 
-# Accept testing keyword for brightnessctl from GURU
-echo "app-misc/brightnessctl ~amd64" > /etc/portage/package.accept_keywords/brightnessctl
+# Unmask testing packages
+cat > /etc/portage/package.accept_keywords/wayland <<EOF
+gui-wm/hyprland ~amd64
+app-misc/brightnessctl ~amd64
+EOF
+
 # Accept Brave Browser license
 echo "www-client/brave-bin Brave" > /etc/portage/package.license/brave-bin
 
-# 4. Apply Global USE flags to make.conf
+# 3. Apply global USE flags
+echo "📝 Applying global USE flags..."
 if ! grep -q "wayland" /etc/portage/make.conf; then
     echo 'USE="${USE} wayland pipewire elogind dbus -nvidia"' >> /etc/portage/make.conf
 fi
 
-# 5. Core Package Installation (Corrected Categories)
-echo "📦 Installing packages..."
-# Using --autounmask-write to help handle any other unexpected keyword issues
-emerge --getbinpkg --verbose \
-  gui-wm/hyprland \
-  gui-apps/waybar \
-  gui-apps/wofi \
-  gui-apps/wl-clipboard \
-  media-video/pipewire \
-  media-video/wireplumber \
-  media-fonts/jetbrains-mono \
-  app-misc/brightnessctl \
-  sys-auth/polkit \
-  sys-auth/elogind \
-  app-misc/neofetch \
-  app-editors/neovim \
-  www-client/brave-bin
+# 4. Update the package database
+echo "🗃️  Updating package database..."
+emerge --sync
 
-# 6. OpenRC Service Setup
-echo "⚙️ Setting up services..."
+# 5. Install core packages with autounmask
+echo "📦 Installing core packages..."
+emerge --autounmask-write --getbinpkg --verbose --ask \
+    gui-wm/hyprland \
+    gui-apps/waybar \
+    gui-apps/wofi \
+    gui-apps/wl-clipboard \
+    media-video/pipewire \
+    media-video/wireplumber \
+    media-fonts/jetbrains-mono \
+    app-misc/brightnessctl \
+    sys-auth/polkit \
+    sys-auth/elogind \
+    app-misc/neofetch \
+    app-editors/neovim \
+    www-client/brave-bin
+
+# Handle autounmask prompts
+echo "🔧 Running dispatch-conf to handle unmasking..."
+dispatch-conf
+
+# 6. Set up OpenRC services
+echo "⚙️ Setting up OpenRC services..."
 rc-update add dbus default
-rc-service dbus start || true
+rc-service dbus start || echo "dbus already running or failed to start"
 rc-update add elogind default
-rc-service elogind start || true
+rc-service elogind start || echo "elogind already running or failed to start"
 
-# 7. Permissions
+# 7. Add user to necessary groups
+echo "👤 Adding user to video, input, and seat groups..."
 usermod -aG video,input,seat "$USER_NAME"
 
-# 8. User-side setup
-sudo -u "$USER_NAME" bash <<EOF
-set -e
-cd "$USER_HOME"
+# 8. User-side setup (Hyprland config and neofetch)
+echo "🏠 Setting up user configuration..."
+sudo -u "$USER_NAME" bash <<USER_SCRIPT
+set -euo pipefail
+cd "$HOME" || exit 1
 
+# Clone Hyprland Material You theme
 if [ ! -d "hyprland-material-you" ]; then
-  git clone https://github.com/koeqaife/hyprland-material-you.git
+    git clone https://github.com/koeqaife/hyprland-material-you.git
+    cd hyprland-material-you || exit 1
+    chmod +x install.sh
+    ./install.sh
 fi
 
-cd hyprland-material-you
-chmod +x install.sh
-# Note: if install.sh asks for a password, you will need to enter it
-./install.sh
-
+# Create config directories
 mkdir -p ~/.config/hypr ~/.config/waybar ~/.config/wofi
 
+# Add neofetch to bashrc
 if ! grep -q "neofetch" ~/.bashrc; then
-  echo -e "\n# terminal drip\nneofetch" >> ~/.bashrc
+    echo -e "\n# terminal drip\nneofetch" >> ~/.bashrc
 fi
-EOF
+USER_SCRIPT
 
 echo "---"
-echo "✅ ALL DONE"
-echo "➡️  Reboot and run: Hyprland"
+echo "✅ Setup complete!"
+echo "➡️ Reboot your system and run 'Hyprland' to start your new environment."
